@@ -2439,13 +2439,11 @@ onAuthStateChanged(auth, (user) => {
             return;
         }
 
-        // ============================================================
-        // 🔥 3. التحقق من الموقع (GPS)
-        // ============================================================
+        // 3. التحقق من الموقع (GPS)
         const disableGPS = sessionStorage.getItem('qm_disable_gps') === 'true';
 
         if (!disableGPS) {
-            // 🛡️ الوضع العادي: لو مفيش موقع، لازم نجيبه دلوقتي حالاً
+            // الوضع العادي: لو مفيش موقع، لازم نجيبه الأول
             if (!userLat || !userLng) {
                 const oldText = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-location-crosshairs fa-spin"></i> جاري تحديد الموقع...';
@@ -2457,21 +2455,54 @@ onAuthStateChanged(auth, (user) => {
                 return;
             }
         } else {
-            // ✅ الوضع السريع: لو مفيش موقع، حط أصفار عشان الفايربيس يقبل
+            // الوضع السريع: لو مفيش موقع، حط أصفار
             if (!userLat) { userLat = 0; userLng = 0; }
         }
 
-        // 4. تغيير شكل الزر لوضع التحميل
+        // 4. تغيير شكل الزر لوضع التحميل (قفل الزر)
         const originalBtnText = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري التسجيل...';
-        safeClick(btn); // قفل الزر مؤقتاً
+        safeClick(btn);
 
         try {
+            // ============================================================
+            // 🛑 الحارس الأمني: فحص حالة الجلسة من السيرفر مباشرة قبل الإرسال
+            // ============================================================
+            const settingsRef = doc(db, "settings", "control_panel");
+            const settingsSnap = await getDoc(settingsRef);
+
+            if (settingsSnap.exists()) {
+                const settings = settingsSnap.data();
+
+                // لو الجلسة اتقفلت في السيرفر (isActive = false)
+                if (!settings.isActive) {
+                    // 1. تنبيه بالاهتزاز
+                    if (navigator.vibrate) navigator.vibrate(500);
+
+                    // 2. رسالة خطأ واضحة
+                    showToast("⛔ عذراً.. انتهى وقت الجلسة أثناء المحاولة!", 5000, "#ef4444");
+
+                    // 3. إظهار نافذة الطرد (System Timeout Modal)
+                    const modal = document.getElementById('systemTimeoutModal');
+                    if (modal) modal.style.display = 'flex';
+
+                    // 4. إعادة الزر لحالته الطبيعية
+                    btn.innerHTML = originalBtnText;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.pointerEvents = "auto";
+
+                    // 5. 🛑 إيقاف التنفيذ فوراً (أهم سطر)
+                    return;
+                }
+            }
+            // ============================================================
+
+            // 5. تجهيز البيانات للإرسال (لن يصل هنا إلا لو الجلسة مفتوحة)
             const now = new Date();
             const dateStr = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + now.getFullYear();
             const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
 
-            // 5. تجهيز البيانات للإرسال
             const dataToSend = {
                 id: uniID,
                 name: studentName,
@@ -2487,15 +2518,13 @@ onAuthStateChanged(auth, (user) => {
                 qr_code: enteredPass,
                 device_id: getUniqueDeviceId(),
                 verification: attendanceData.isVerified ? "VERIFIED" : "MANUAL",
-                face_vector: attendanceData.vector || [] // بصمة الوجه لو موجودة
+                face_vector: attendanceData.vector || []
             };
 
             // 6. الإرسال إلى Firebase
             await addDoc(collection(db, "attendance"), dataToSend);
 
-            // ============================================================
-            // ✅ الإصلاح: ملء بيانات التذكرة قبل عرضها
-            // ============================================================
+            // 7. ملء التذكرة
             document.getElementById('receiptName').innerText = studentName;
             document.getElementById('receiptID').innerText = uniID;
             document.getElementById('receiptGroup').innerText = group;
@@ -2503,13 +2532,10 @@ onAuthStateChanged(auth, (user) => {
             document.getElementById('receiptHall').innerText = hall;
             document.getElementById('receiptDate').innerText = dateStr;
             document.getElementById('receiptTime').innerText = timeStr;
-            // ============================================================
 
-            // 7. إظهار شاشة النجاح
+            // 8. إظهار شاشة النجاح
             playSuccess();
             switchScreen('screenSuccess');
-
-            // تنظيف البيانات الخلفية استعداداً للطالب التالي
             resetApplicationState();
 
         } catch (error) {
