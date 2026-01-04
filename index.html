@@ -392,6 +392,71 @@
             <div class="notification-badge"></div>
         </div>
 
+        <div id="infoBtn" class="info-btn" onclick="showInfoModal()">
+            <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <div id="infoModal" class="modal-overlay" style="z-index: 9999999;">
+            <div class="modal-box info-modern-box" dir="ltr">
+
+                <div class="heart-icon-wrapper">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+
+                <h3 class="info-title-main">Designed with passion</h3>
+                <p class="info-subtitle">to celebrate your presence every day</p>
+
+                <div class="info-content-card">
+
+                    <div class="faculty-section">
+                        <div class="faculty-icon" style="background: transparent; padding: 0;">
+                            <img src="https://k.top4top.io/p_3615d3vek1.png" alt="Logo"
+                                style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                        </div>
+                        <div>
+                            <div style="font-size: 10px; color: #94a3b8; font-weight: 700; letter-spacing: 1px;">
+                                SPONSORED BY</div>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 15px;">Faculty of Nursing</div>
+                            <div style="font-size: 13px; color: #64748b;">Al-Ryada University</div>
+                        </div>
+                    </div>
+
+                    <div class="dean-highlight">
+                        <span class="dean-label">Under the Deanship of</span>
+                        <span class="dean-name">Prof. Dr. Naglaa Abdelmawgoud</span>
+                    </div>
+
+                    <div style="margin: 20px 0; border-top: 1px dashed #e2e8f0;"></div>
+
+                    <div class="credits-grid">
+                        <div class="credit-item">
+                            <div class="credit-icon icon-green">
+                                <i class="fa-solid fa-user-tie"></i>
+                            </div>
+                            <div class="credit-info">
+                                <h4>Supervision</h4>
+                                <p>Dr. Mahmoud Othman</p>
+                            </div>
+                        </div>
+
+                        <div class="credit-item">
+                            <div class="credit-icon icon-blue">
+                                <i class="fa-solid fa-code"></i>
+                            </div>
+                            <div class="credit-info">
+                                <h4>Development</h4>
+                                <p>Abdelrahman Abdelaziz</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <button onclick="document.getElementById('infoModal').style.display='none'" class="btn-close-modern">
+                    Close
+                </button>
+            </div>
+        </div>
+
         <div class="card-body">
 
             <div class="hero-icon-wrapper" id="heroIconWrapper">
