@@ -3605,3 +3605,13 @@ window.filterModalSubjects = function () {
         select.appendChild(opt);
     }
 };
+window.showInfoModal = function () {
+    // تشغيل صوت نقرة لو موجود عندك
+    if (typeof playClick === 'function') playClick();
+
+    // إظهار النافذة
+    const modal = document.getElementById('infoModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+};
