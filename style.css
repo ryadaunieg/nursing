@@ -1223,3 +1223,218 @@ p { font-size: 13px; color: var(--text-sub); margin-bottom: 25px; line-height: 1
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     width: max-content;
 }
+/* تنسيق الزر ليصبح دائري وفي اليمين */
+/* الكود المعدل: رفعنا الزر قليلاً ليوازي الجرس */
+.info-btn {
+    position: absolute;
+    top: 35px;      /* جربنا 15 بدلاً من 20 لرفع الزر قليلاً */
+    right: 33px;
+    width: 50px;
+    height: 50px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    margin: 0;      /* ضمان عدم وجود هوامش إضافية */
+    transition: all 0.3s ease;
+}
+
+/* القلب النابض */
+.info-btn i {
+    color: #ef4444;
+    font-size: 22px;
+    animation: heartBeat 1.5s infinite;
+}
+
+.info-btn:active {
+    transform: scale(0.95);
+}
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.3); }
+    70% { transform: scale(1); }
+    100% { transform: scale(1); }
+}
+/* --- تصميم مودال المعلومات الجديد --- */
+
+/* تنسيق الصندوق الأساسي */
+.info-modern-box {
+    text-align: center;
+    padding: 25px 20px;
+    background: #ffffff;
+    border-radius: 24px; /* حواف دائرية ناعمة */
+}
+
+/* أيقونة القلب في الأعلى */
+.heart-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #fee2e2 0%, #ffe4e6 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px auto;
+    box-shadow: 0 10px 20px rgba(244, 63, 94, 0.15);
+}
+
+.heart-icon-wrapper i {
+    color: #f43f5e;
+    font-size: 32px;
+    animation: heartBeat 1.5s infinite;
+}
+
+/* العناوين */
+.info-title-main {
+    font-family: 'Outfit', sans-serif;
+    color: #1e293b;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+}
+
+.info-subtitle {
+    font-family: 'Outfit', sans-serif;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 25px;
+}
+
+/* كرت المحتوى الرمادي الفاتح */
+.info-content-card {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 20px;
+    text-align: left;
+}
+
+/* قسم الكلية */
+.faculty-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.faculty-icon {
+    width: 45px;
+    height: 45px;
+    background: #e0f2fe;
+    color: #0ea5e9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+/* --- تعديل قسم العميدة (حل مشكلة قطع الاسم) --- */
+.dean-highlight {
+    background: linear-gradient(to right, #eff6ff, #ffffff);
+    border-left: 4px solid #6366f1; /* خط بنفسجي مميز على اليسار */
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    width: 100%; /* يأخذ العرض بالكامل */
+}
+
+.dean-label {
+    font-size: 11px;
+    color: #6366f1;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.dean-name {
+    font-size: 14px;
+    color: #1e293b;
+    font-weight: 700;
+    line-height: 1.4; /* مسافة بين السطور لراحة العين */
+    display: block;
+}
+
+/* --- كروت فريق العمل (Credits) --- */
+.credits-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.credit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+
+.credit-item:hover {
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.credit-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+/* ألوان مريحة للأيقونات */
+.icon-green { background: #dcfce7; color: #166534; }
+.icon-blue { background: #dbeafe; color: #1e40af; }
+
+.credit-info h4 {
+    margin: 0;
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.credit-info p {
+    margin: 2px 0 0 0;
+    font-size: 13px;
+    color: #334155;
+    font-weight: 700;
+}
+
+/* زر الإغلاق الجديد */
+.btn-close-modern {
+    background: #1e293b; /* كحلي داكن */
+    color: white;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(30, 41, 59, 0.2);
+    transition: transform 0.2s;
+}
+
+.btn-close-modern:active {
+    transform: scale(0.98);
+}
