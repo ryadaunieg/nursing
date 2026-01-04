@@ -1,4 +1,22 @@
 // ==========================================
+// تعريف المواد بشكل عام (عشان البحث يشوفها)
+// ضع هذا الكود في أول سطر في ملف script.js
+// ==========================================
+window.subjectsData = JSON.parse(localStorage.getItem('subjectsData_v4')) || {
+    "first_year": [
+        "اساسيات تمريض 1 نظري", "اساسيات تمريض 1 عملي",
+        "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى",
+        "اناتومى نظرى", "اناتومى عملى",
+        "تقييم صحى نظرى", "تقييم صحى عملى",
+        "مصطلحات طبية", "فسيولوجى", "تكنولوجيا المعلومات"
+    ],
+    "second_year": [
+        "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى",
+        "تمريض حالات حرجة 1 نظرى", "تمريض حالات حرجة 1 عملى",
+        "امراض باطنة", "باثولوجى", "علم الأدوية", "الكتابة التقنية"
+    ]
+};
+// ==========================================
 //  1. استيراد مكتبات Firebase (تم إضافة Auth)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -479,12 +497,76 @@ onAuthStateChanged(auth, (user) => {
     // ==========================================
     // 🎮 نظام التحكم في الجلسة بالوقت (مطور)
     // ==========================================
+    // ==========================================
+    // 1. خوارزميات البحث الذكي (تجاهل الهمزات)
+    // ==========================================
+
+    // دالة تنظيف النص (بتحول "أحمد" لـ "احمد" و "إلهام" لـ "الهام")
+    function normalizeArabic(text) {
+        if (!text) return "";
+        return text.toString()
+            .replace(/[أإآ]/g, 'ا')  // توحيد الألف
+            .replace(/ة/g, 'ه')      // توحيد التاء المربوطة
+            .replace(/ى/g, 'ي')      // توحيد الياء
+            .toLowerCase();          // للأحرف الإنجليزية
+    }
+
+    window.filterModalSubjects = function () {
+        const input = document.getElementById('subjectSearchInput');
+        const select = document.getElementById('modalSubjectSelect');
+
+        if (!input || !select) return;
+
+        const query = normalizeArabic(input.value);
+        select.innerHTML = '';
+
+        if (typeof subjectsData === 'undefined' || !subjectsData) {
+            const opt = document.createElement('option');
+            opt.text = "Error: No subjects loaded";
+            select.appendChild(opt);
+            return;
+        }
+
+        let hasResults = false;
+
+        for (const [year, subjects] of Object.entries(subjectsData)) {
+            const matchedSubjects = subjects.filter(sub => normalizeArabic(sub).includes(query));
+
+            if (matchedSubjects.length > 0) {
+                hasResults = true;
+                const group = document.createElement('optgroup');
+
+                // ترجمة أسماء الفرق للإنجليزية في العرض (اختياري، أو اتركها كما هي)
+                // سأتركها كما هي لأنها جزء من "المواد"
+                let label = year;
+                if (year === "first_year" || year === "1") label = "First Year"; // تعديل بسيط لاسم الجروب
+                else if (year === "second_year" || year === "2") label = "Second Year";
+                else if (year === "third_year" || year === "3") label = "Third Year";
+                else if (year === "fourth_year" || year === "4") label = "Fourth Year";
+
+                group.label = label;
+
+                matchedSubjects.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.text = sub;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            }
+        }
+
+        if (!hasResults) {
+            const opt = document.createElement('option');
+            // هنا التغيير للإنجليزي
+            opt.text = (input.value === "") ? "-- Select Subject --" : "No matching subjects";
+            opt.disabled = true;
+            select.appendChild(opt);
+        }
+    };
 
     // ==========================================
-    // 1. فتح نافذة اختيار الوقت (تصميم حديث بـ SweetAlert2)
-    // ==========================================
-    // ==========================================
-    // 1. فتح نافذة النظام الخاصة (Custom System Modal)
+    // 2. دالة فتح النافذة (المعدلة للبحث)
     // ==========================================
     window.toggleSessionState = function () {
         // التأكد إن المستخدم أدمن
@@ -496,36 +578,58 @@ onAuthStateChanged(auth, (user) => {
         if (btn && btn.classList.contains('session-open')) {
             closeSessionImmediately();
         } else {
-            // لو مغلقة -> افتح النافذة الخاصة بينا (الشفافة)
+            // لو مغلقة -> افتح النافذة
             const modal = document.getElementById('customTimeModal');
-            if (modal) {
-                modal.style.display = 'flex'; // إظهار النافذة
-            } else {
-                console.error("لم يتم العثور على النافذة customTimeModal في HTML");
-            }
+            const passInput = document.getElementById('modalSessionPassInput');
+            const searchInput = document.getElementById('subjectSearchInput'); // خانة البحث
+
+            // 1. تنظيف الحقول
+            if (passInput) passInput.value = '';
+            if (searchInput) searchInput.value = ''; // تصفير البحث عشان يعرض كل المواد
+
+            // 2. استدعاء دالة الفلترة وهي فاضية (عشان تعرض كل المواد في البداية)
+            filterModalSubjects();
+
+            if (modal) modal.style.display = 'flex';
         }
     };
 
     // ==========================================
-    // 2. تنفيذ البدء وإخفاء النافذة
+    // 2. بدء الجلسة (إرسال المادة + الباسورد + الوقت)
     // ==========================================
     window.confirmSessionStart = async function (seconds) {
-        // إخفاء النافذة فوراً
         const modal = document.getElementById('customTimeModal');
+
+        // 1. جلب البيانات من النافذة الجديدة
+        const selectedSubject = document.getElementById('modalSubjectSelect').value;
+        const sessionPass = document.getElementById('modalSessionPassInput').value.trim();
+
+        // فحص إجباري: لازم يختار مادة
+        if (!selectedSubject || selectedSubject === "") {
+            if (navigator.vibrate) navigator.vibrate(200);
+            showToast("⚠️ يجب اختيار المادة من القائمة!", 3000, "#f59e0b");
+            return;
+        }
+
+        // إخفاء النافذة
         if (modal) modal.style.display = 'none';
 
         try {
             const docRef = doc(db, "settings", "control_panel");
 
-            // إرسال البيانات للسيرفر (مع serverTimestamp)
+            // 2. إرسال البيانات للسيرفر
             await setDoc(docRef, {
                 isActive: true,
                 startTime: serverTimestamp(),
-                duration: seconds
+                duration: seconds,
+                allowedSubject: selectedSubject, // المادة الإجبارية
+                sessionPassword: sessionPass     // كلمة السر (لو وجدت)
             }, { merge: true });
 
-            // رسالة تأكيد صغيرة
-            showToast(`تم فتح الجلسة بنجاح 🚀`, 2000, "#10b981");
+            let msg = `تم الفتح لمادة: ${selectedSubject}`;
+            if (sessionPass) msg += ` 🔒`; // رمز قفل لو فيه باسورد
+
+            showToast(msg, 3000, "#10b981");
 
         } catch (e) {
             console.error(e);
@@ -2415,58 +2519,38 @@ onAuthStateChanged(auth, (user) => {
     }
     // ==========================================
     // 🚀 دالة الإرسال النهائية (submitToGoogle)
-    // ==========================================
-    window.submitToGoogle = async function () {
+    window.submitToGoogle = async function (passwordOverride = null) {
         const btn = document.getElementById('submitBtn');
 
-        // منع التكرار (Debounce)
-        if (btn.disabled || btn.style.opacity === "0.7") return;
+        // منع التكرار (إلا لو جاي من نافذة الباسورد)
+        if (!passwordOverride && (btn.disabled || btn.style.opacity === "0.7")) return;
 
-        playClick();
+        if (!passwordOverride) playClick();
 
-        // 1. تجميع البيانات من الحقول
+        // 1. تجميع البيانات
         const uniID = attendanceData.uniID || document.getElementById('uniID').value;
         const studentName = attendanceData.name || sessionStorage.getItem(TEMP_NAME_KEY);
         const subject = document.getElementById('subjectSelect').value;
         const group = document.getElementById('groupSelect').value;
         const hall = document.getElementById('hallSelect').value;
         const sessionCode = document.getElementById('attendanceCode').value;
-        const enteredPass = document.getElementById('sessionPass').value; // كود الـ QR
+        const enteredPass = document.getElementById('sessionPass').value;
 
-        // 2. التحقق من البيانات الأساسية
         if (!uniID || !studentName || !subject || !group || !hall) {
-            showToast("⚠️ بيانات ناقصة! أعد المحاولة", 3000, "#f59e0b");
+            showToast("⚠️ بيانات ناقصة!", 3000, "#f59e0b");
             return;
         }
 
-        // 3. التحقق من الموقع (GPS)
-        const disableGPS = sessionStorage.getItem('qm_disable_gps') === 'true';
-
-        if (!disableGPS) {
-            // الوضع العادي: لو مفيش موقع، لازم نجيبه الأول
-            if (!userLat || !userLng) {
-                const oldText = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-location-crosshairs fa-spin"></i> جاري تحديد الموقع...';
-
-                checkLocationStrict(() => {
-                    btn.innerHTML = oldText;
-                    submitToGoogle(); // إعادة المحاولة بعد جلب الموقع
-                });
-                return;
-            }
-        } else {
-            // الوضع السريع: لو مفيش موقع، حط أصفار
-            if (!userLat) { userLat = 0; userLng = 0; }
-        }
-
-        // 4. تغيير شكل الزر لوضع التحميل (قفل الزر)
+        // 2. قفل الزر (لو مش جاي من نافذة الباسورد)
         const originalBtnText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري التسجيل...';
-        safeClick(btn);
+        if (!passwordOverride) {
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري التحقق...';
+            safeClick(btn);
+        }
 
         try {
             // ============================================================
-            // 🛑 الحارس الأمني: فحص حالة الجلسة من السيرفر مباشرة قبل الإرسال
+            // 🛑 الحارس الذكي (Smart Guard: Subject & Password)
             // ============================================================
             const settingsRef = doc(db, "settings", "control_panel");
             const settingsSnap = await getDoc(settingsRef);
@@ -2474,31 +2558,70 @@ onAuthStateChanged(auth, (user) => {
             if (settingsSnap.exists()) {
                 const settings = settingsSnap.data();
 
-                // لو الجلسة اتقفلت في السيرفر (isActive = false)
+                // أ) هل الجلسة مغلقة يدوياً؟
                 if (!settings.isActive) {
-                    // 1. تنبيه بالاهتزاز
-                    if (navigator.vibrate) navigator.vibrate(500);
-
-                    // 2. رسالة خطأ واضحة
-                    showToast("⛔ عذراً.. انتهى وقت الجلسة أثناء المحاولة!", 5000, "#ef4444");
-
-                    // 3. إظهار نافذة الطرد (System Timeout Modal)
-                    const modal = document.getElementById('systemTimeoutModal');
-                    if (modal) modal.style.display = 'flex';
-
-                    // 4. إعادة الزر لحالته الطبيعية
-                    btn.innerHTML = originalBtnText;
-                    btn.disabled = false;
-                    btn.style.opacity = "1";
-                    btn.style.pointerEvents = "auto";
-
-                    // 5. 🛑 إيقاف التنفيذ فوراً (أهم سطر)
+                    rejectSubmission("⛔ الجلسة مغلقة حالياً.");
                     return;
                 }
-            }
-            // ============================================================
 
-            // 5. تجهيز البيانات للإرسال (لن يصل هنا إلا لو الجلسة مفتوحة)
+                // ب) فحص المادة (بدون ذكر الاسم المفتوح للطالب إذا كان خاطئاً)
+                if (settings.allowedSubject && settings.allowedSubject !== subject) {
+                    rejectSubmission("⛔ التسجيل غير متاح لهذه المادة الآن.");
+                    return;
+                }
+
+                // جـ) فحص الوقت الحسابي
+                if (settings.duration !== -1 && settings.startTime) {
+                    const startTimeMs = settings.startTime.toMillis();
+                    const durationMs = settings.duration * 1000;
+                    const deadline = startTimeMs + durationMs;
+
+                    // السماح بـ 5 ثواني فرق توقيت
+                    if (Date.now() > (deadline + 5000)) {
+                        setDoc(settingsRef, { isActive: false }, { merge: true });
+                        rejectSubmission("⛔ انتهى الوقت المحدد للجلسة!");
+                        return;
+                    }
+                }
+
+                // د) فحص كلمة السر (Scenario: Password Check)
+                if (settings.sessionPassword && settings.sessionPassword.trim() !== "") {
+
+                    // 1. الطالب لم يدخل الباسورد بعد
+                    if (!passwordOverride) {
+                        // فتح نافذة الباسورد
+                        document.getElementById('studentPassModal').style.display = 'flex';
+
+                        // إرجاع الزر لحالته الطبيعية
+                        btn.innerHTML = originalBtnText;
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                        btn.style.pointerEvents = "auto";
+                        return; // 🛑 توقف هنا وانتظر الإدخال
+                    }
+
+                    // 2. الطالب أدخل باسورد (passwordOverride) -> نتحقق منها
+                    if (passwordOverride !== settings.sessionPassword) {
+                        showToast("❌ كلمة سر الجلسة غير صحيحة!", 3000, "#ef4444");
+
+                        // إرجاع الزر لحالته ليحاول مرة أخرى
+                        btn.innerHTML = originalBtnText;
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                        btn.style.pointerEvents = "auto";
+                        return;
+                    }
+                }
+                // ============================================================
+            } else {
+                rejectSubmission("❌ خطأ في النظام: الإعدادات غير متاحة");
+                return;
+            }
+
+            // 3. كل شيء صحيح -> تنفيذ التسجيل
+            document.getElementById('studentPassModal').style.display = 'none';
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-spin"></i> جاري الحفظ...';
+
             const now = new Date();
             const dateStr = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + now.getFullYear();
             const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
@@ -2511,7 +2634,7 @@ onAuthStateChanged(auth, (user) => {
                 hall: hall,
                 date: dateStr,
                 time_str: timeStr,
-                timestamp: serverTimestamp(), // وقت السيرفر
+                timestamp: serverTimestamp(),
                 lat: userLat,
                 lng: userLng,
                 session_code: sessionCode,
@@ -2521,10 +2644,40 @@ onAuthStateChanged(auth, (user) => {
                 face_vector: attendanceData.vector || []
             };
 
-            // 6. الإرسال إلى Firebase
-            await addDoc(collection(db, "attendance"), dataToSend);
+            // ============================================================
+            // 🛑 منع التكرار: إنشاء بصمة فريدة (ID) للمستند
+            // ============================================================
 
-            // 7. ملء التذكرة
+            // 1. تجهيز اسم مستند فريد (الرقم الجامعي + التاريخ + المادة)
+            const safeDate = dateStr.replace(/\//g, '-');
+            const safeSubject = subject.replace(/\s/g, '_');
+            const uniqueDocID = `${uniID}_${safeDate}_${safeSubject}`;
+
+            // 2. تحديد المستند في قاعدة البيانات
+            const docRef = doc(db, "attendance", uniqueDocID);
+
+            // 3. فحص هل الطالب سجل قبل كده؟
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                // ⛔ لو موجود -> طلع رسالة واخرج
+                showToast("⚠️ أنت مسجل بالفعل في هذه المحاضرة!", 5000, "#f59e0b");
+
+                // إظهار نافذة تنبيه (لو عندك المودال ده في الـ HTML)
+                const duplicateModal = document.getElementById('duplicateModal');
+                if (duplicateModal) duplicateModal.style.display = 'flex';
+
+                // رجع الزرار لحالته الطبيعية
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.pointerEvents = "auto";
+                return; // 🛑 وقف الكود هنا وماتكملش
+            }
+
+            // 4. لو مش مسجل -> احفظ البيانات (استخدمنا setDoc بدلاً من addDoc)
+            await setDoc(docRef, dataToSend);
+            // ملء التذكرة
             document.getElementById('receiptName').innerText = studentName;
             document.getElementById('receiptID').innerText = uniID;
             document.getElementById('receiptGroup').innerText = group;
@@ -2533,21 +2686,67 @@ onAuthStateChanged(auth, (user) => {
             document.getElementById('receiptDate').innerText = dateStr;
             document.getElementById('receiptTime').innerText = timeStr;
 
-            // 8. إظهار شاشة النجاح
             playSuccess();
             switchScreen('screenSuccess');
             resetApplicationState();
 
         } catch (error) {
             console.error("Submission Error:", error);
-            showToast("❌ فشل التسجيل! تأكد من النت", 4000, "#ef4444");
 
-            // إرجاع الزر لحالته الطبيعية عند الفشل
+            if (error.code === 'permission-denied') {
+                // هنا استخدمنا الدالة بتاعتك عشان تظهر الرفض بشياكة
+                rejectSubmission("⛔ تم رفض التسجيل! (انتهى وقت الجلسة أو البيانات غير صحيحة)");
+            } else {
+                // لو المشكلة نت
+                showToast("❌ خطأ في الاتصال! تأكد من الإنترنت وحاول مرة أخرى", 4000, "#ef4444");
+
+                // نرجع الزرار يدوي هنا لأن rejectSubmission بتطلع نافذة الرفض وإحنا مش عايزينها تطلع لو النت قاطع
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.pointerEvents = "auto";
+            }
+        }
+
+        function rejectSubmission(msg) {
+            if (navigator.vibrate) navigator.vibrate(500);
+            showToast(msg, 5000, "#ef4444");
+
+            document.getElementById('studentPassModal').style.display = 'none';
+
+            const modal = document.getElementById('systemTimeoutModal');
+            if (modal) {
+                const msgEl = modal.querySelector('h2');
+                const subEl = modal.querySelector('p');
+                if (msgEl) msgEl.innerText = "تسجيل مرفوض";
+                if (subEl) subEl.innerText = msg;
+                modal.style.display = 'flex';
+            }
+
             btn.innerHTML = originalBtnText;
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.style.pointerEvents = "auto";
         }
+    };
+
+    // 4. دوال التحكم في نافذة الباسورد (للطالب)
+    window.verifyAndSubmit = function () {
+        const passInput = document.getElementById('studentEnteredPass');
+        const pass = passInput.value.trim();
+
+        if (!pass) {
+            showToast("⚠️ الرجاء كتابة الرمز", 2000, "#f59e0b");
+            return;
+        }
+
+        // إعادة استدعاء دالة التسجيل مع تمرير الباسورد
+        submitToGoogle(pass);
+    };
+
+    window.closeStudentPassModal = function () {
+        document.getElementById('studentPassModal').style.display = 'none';
+        document.getElementById('studentEnteredPass').value = '';
     };
 
     // 👇👇👇 القوس النهائي للملف (تأكد إنه آخر حاجة) 👇👇👇
@@ -3353,4 +3552,56 @@ window.playSuccess = function () {
 
 window.playBeep = function () {
     // تم التعطيل لمنع الانهيار
+};
+// ==========================================
+// 🧠 خوارزمية البحث الذكي (تجاهل الهمزات)
+// ==========================================
+
+// 1. دالة تنظيف النص (بتحول "أحمد" لـ "احمد" و "إلهام" لـ "الهام")
+function normalizeArabic(text) {
+    if (!text) return "";
+    return text.toString()
+        .replace(/[أإآ]/g, 'ا')  // توحيد الألف
+        .replace(/ة/g, 'ه')      // توحيد التاء المربوطة
+        .replace(/ى/g, 'ي')      // توحيد الياء
+        .toLowerCase();          // للأحرف الإنجليزية إن وجدت
+}
+
+// 2. دالة الفلترة (بتشتغل لما الدكتور يكتب)
+window.filterModalSubjects = function () {
+    const input = document.getElementById('subjectSearchInput');
+    const select = document.getElementById('modalSubjectSelect');
+    const query = normalizeArabic(input.value); // النص اللي كتبه الدكتور (منظف)
+
+    select.innerHTML = ''; // مسح القائمة الحالية
+
+    if (typeof subjectsData !== 'undefined') {
+        // نلف على كل السنوات والمواد
+        for (const [year, subjects] of Object.entries(subjectsData)) {
+            // تصفية المواد اللي بتطابق البحث
+            const matchedSubjects = subjects.filter(sub => normalizeArabic(sub).includes(query));
+
+            if (matchedSubjects.length > 0) {
+                // إضافة عنوان المجموعة (الفرقة)
+                const group = document.createElement('optgroup');
+                group.label = (year === "first_year") ? "الفرقة الأولى" : "الفرقة الثانية"; // وغيره حسب التسمية
+
+                matchedSubjects.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.text = sub;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            }
+        }
+    }
+
+    // لو مفيش نتايج
+    if (select.options.length === 0) {
+        const opt = document.createElement('option');
+        opt.text = "لا توجد نتائج مطابقة";
+        opt.disabled = true;
+        select.appendChild(opt);
+    }
 };
